@@ -1,0 +1,12 @@
+setup.py
+ndashboard.egg-info/PKG-INFO
+ndashboard.egg-info/SOURCES.txt
+ndashboard.egg-info/dependency_links.txt
+ndashboard.egg-info/top_level.txt
+nquality/__init__.py
+nquality/quality_across_sessions.py
+nquality/quality_within_session.py
+nquality/raw_data_template.py
+nquality/statistics.py
+nquality/stat_benchmarks/__init__.py
+nquality/stat_benchmarks/analyze_performance.py
