@@ -31,7 +31,7 @@ def create_nwb(config, path):
         experiment_description  = config['general']['experiment_info']['experiment_description'],
         session_id              = config['session_info']['session_id'],
         lab                     = config['general']['lab_info']['lab'],                     
-        institution             = config['general']['lab_info']['institution'],                                    
+        institution             = config['general']['lab_info']['university'],                                    
         keywords                = config['general']['experiment_info']['keywords'],
         surgery                 = config['general']['experiment_info']['surgery']
     )
@@ -174,9 +174,38 @@ def create_nwb(config, path):
     ################ ADD PSTH IF AVAIL #############################################
     ################################################################################
 
-    
+    if config['subject']['subject_id'] == 'solo':
 
-    if 'psth' in os.listdir(path):
+        pattern = os.path.join(path+'/psth', '*' + '_psth.npy')
+        psthpath = glob.glob(pattern)[0]
+
+        psth = np.load(psthpath, allow_pickle=True)
+        data_item = psth.item()
+
+        data = data_item['psth']
+        meta = data_item['meta']
+
+        first_element = data_item['meta'][0]
+        start_time_ms = first_element['startTime'][0][0][0]
+        stop_time_ms = first_element['stopTime'][0][0][0]
+        tb_ms = first_element['tb'][0][0][0]
+        
+        meta = [start_time_ms, stop_time_ms, tb_ms]
+        
+        nwbfile.add_scratch(
+            data,
+            name="psth",
+            description="psth [stimuli x reps x timebins x channels]",
+            )
+        
+        nwbfile.add_scratch(
+                meta,
+                name="psth meta",
+                description="start_time_ms, stop_time_ms, tb_ms",
+                )
+
+
+    elif 'psth' in os.listdir(path):
         psthpath = path+'/psth/'+os.listdir(path+'/psth')[0]
         psth = scipy.io.loadmat(psthpath)
         data = psth['psth']
@@ -199,29 +228,11 @@ def create_nwb(config, path):
                 description="start_time_ms, stop_time_ms, tb_ms",
                 )
 
-    # if 'h5Files' in os.listdir(path):
-    #     if len(os.listdir(os.path.join(path, 'h5Files'))) != 0:
-
-    #         filename = os.listdir(os.path.join(path, 'h5Files'))[0]
-    #         file = h5py.File(os.path.join(path, 'h5Files', filename),'r+') 
-    #         data = file['psth'][:]
-    #         meta = np.array([np.array(file['meta']['start_time_ms']), np.array(file['meta']['stop_time_ms']), np.array(file['meta']['tb_ms'])])
-    #         file.close()
-
-    #         nwbfile.add_scratch(
-    #             data,
-    #             name="psth",
-    #             description="psth, uncorrected [stimuli x reps x timebins x channels]",
-    #             )
-            
-    #         nwbfile.add_scratch(
-    #                 meta,
-    #                 name="psth meta",
-    #                 description="start_time_ms, stop_time_ms, tb_ms",
-    #                 )
 
     return nwbfile
 
+
+# the following functions are not used for this pipeline. 
 
 def calc_psth(nwbfile, mworks_dir, start_time_ms, stop_time_ms, tb_ms, n_stimuli = None):
     start_time_ms = int(start_time_ms)
@@ -283,10 +294,6 @@ def calc_psth(nwbfile, mworks_dir, start_time_ms, stop_time_ms, tb_ms, n_stimuli
     meta = {'start_time_ms': start_time_ms, 'stop_time_ms': stop_time_ms, 'tb_ms': tb_ms}
     cmbined_psth = {'psth': PSTH, 'meta': meta}
     return PSTH
-
-
-
-
 
 
 def get_psth_from_nwb(nwbfile, path, start_time, stop_time, timebin, n_stimuli=None):
