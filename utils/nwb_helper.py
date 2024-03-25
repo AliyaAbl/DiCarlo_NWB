@@ -88,14 +88,24 @@ def create_nwb(config, path):
         manufacturer= config['hardware']['electrode_manuf']
     )
 
-    all_files = sorted(os.listdir(os.path.join(path, 'SpikeTimes')))
-    all_files = [item for item in all_files if not item.startswith('.')]
+    if config['subject']['subject_id'] != 'solo':
+        all_files = sorted(os.listdir(os.path.join(path, 'SpikeTimes')))
+        all_files = [item for item in all_files if not item.startswith('.')]
 
-    
-    name_accumulator = []
-    for file in all_files:
-        name_accumulator.append(read_names(file))
-    names = np.vstack(name_accumulator)
+        name_accumulator = []
+        for file in all_files:
+            name_accumulator.append(read_names(file))
+        names = np.vstack(name_accumulator)
+
+    else: 
+        with open('/braintree/home/aliya277/sachis_data/solo_mapping.json', 'r') as file:
+            data = json.load(file)
+        list_values = data['neuroid_id'].values()
+        names_list = [value.split('-') for value in list_values]
+        list_assignment_number_int = [[pair[0], int(pair[1])] for pair in names_list]
+
+        # Convert the list to a numpy array
+        names = np.array(list_assignment_number_int, dtype='object')
 
     nwbfile.add_electrode_column(name="label", description="label of electrode")
     groups, count_groups = np.unique(names[:,0], return_counts =True)
@@ -131,45 +141,46 @@ def create_nwb(config, path):
 
     ################ ADD SPIKE TIMES ###############################################
     ################################################################################
+    if config['subject']['subject_id'] != 'solo':
 
-    nwbfile.add_unit_column(name="unit", description="millisecond") 
+        nwbfile.add_unit_column(name="unit", description="millisecond") 
 
-    for filename, i in zip(all_files, range(len(all_files))):
-        [assignment, number] = read_names(filename)
-        file_path = os.path.join(path, 'SpikeTimes', filename)
-        try: data = scipy.io.loadmat(file_path, squeeze_me=True,
-                        variable_names='spike_time_ms')['spike_time_ms']
-        except:data = scipy.io.loadmat(file_path, squeeze_me=True,
-                        variable_names='spikeTime')['spikeTime']
-        nwbfile.add_unit(
-            spike_times = data, 
-            electrodes  = [i],
-            electrode_group = nwbfile.electrode_groups[f'group_{assignment}'], 
-            unit = 'ms'
-        )
+        for filename, i in zip(all_files, range(len(all_files))):
+            [assignment, number] = read_names(filename)
+            file_path = os.path.join(path, 'SpikeTimes', filename)
+            try: data = scipy.io.loadmat(file_path, squeeze_me=True,
+                            variable_names='spike_time_ms')['spike_time_ms']
+            except:data = scipy.io.loadmat(file_path, squeeze_me=True,
+                            variable_names='spikeTime')['spikeTime']
+            nwbfile.add_unit(
+                spike_times = data, 
+                electrodes  = [i],
+                electrode_group = nwbfile.electrode_groups[f'group_{assignment}'], 
+                unit = 'ms'
+            )
 
-    ################ ADD TRIAL TIMES ###############################################
-    ################################################################################
-    last_spike = data[-1]
-    del data
-    
-    try: 
-        [on, off] = config['session_info']['session_description'].split(', ')[3].split(': ')[-1].split("/")
-        on_start  = 0
-        on_dur    = int(on)
-        off_dur   = int(off)
-
+        ################ ADD TRIAL TIMES ###############################################
+        ################################################################################
+        last_spike = data[-1]
+        del data
         
-        nwbfile.add_trial_column(name="unit", description="millisecond")
-        while on_start < last_spike:
+        try: 
+            [on, off] = config['session_info']['session_description'].split(', ')[3].split(': ')[-1].split("/")
+            on_start  = 0
+            on_dur    = int(on)
+            off_dur   = int(off)
 
-            nwbfile.add_trial(
-                start_time= float(on_start),
-                stop_time = float(on_start+on_dur),
-                unit = 'ms')
-        
-            on_start += on_dur+off_dur
-    except: pass 
+            
+            nwbfile.add_trial_column(name="unit", description="millisecond")
+            while on_start < last_spike:
+
+                nwbfile.add_trial(
+                    start_time= float(on_start),
+                    stop_time = float(on_start+on_dur),
+                    unit = 'ms')
+            
+                on_start += on_dur+off_dur
+        except: pass 
 
     ################ ADD PSTH IF AVAIL #############################################
     ################################################################################

@@ -11,6 +11,7 @@ import configparser
 import pandas as pd
 
 
+
 def load_array_metadata(array_path):
     array          = open(array_path)
     data           = json.load(array)
@@ -55,7 +56,6 @@ def load_excel_sarah():
     df_sarah.columns = new_header  
     df_sarah = df_sarah.fillna('empty') 
     return df_sarah
-
 
 def create_yaml(storage_dir, imageset, subj, date, time, array_metadata_path, df = None, adapter_info_avail=False):
     
@@ -169,7 +169,6 @@ def create_yaml(storage_dir, imageset, subj, date, time, array_metadata_path, df
                 'session_id': directory,
                 'session_description': 'RSVP task',
                 }
-        
     if subj == 'pico':
         config_dict['PSTH info'] = {}
 
@@ -219,6 +218,7 @@ def create_yaml(storage_dir, imageset, subj, date, time, array_metadata_path, df
     yaml = YAML()
     with open(os.path.join(subjectdir_date,directory,f"config_nwb.yaml"), 'w') as yamlfile:
         yaml.dump((config_dict), yamlfile)
+
 
 
 
